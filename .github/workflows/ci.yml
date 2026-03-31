@@ -108,13 +108,24 @@ jobs:
         id: changelog
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
-          # Extract content between ## [vX.Y.Z] and the next ## [ or end of file
-          BODY=$(awk "/^## \\[${TAG}\\]/{found=1; next} /^## \\[/{if(found) exit} found{print}" CHANGELOG.md)
-          if [ -z "$BODY" ]; then
-            BODY="See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details."
-          fi
-          # Write to file to avoid escaping issues
-          echo "$BODY" > /tmp/release_body.md
+          # Extract English changelog
+          EN=$(awk "/^## \\[${TAG}\\]/{found=1; next} /^## \\[/{if(found) exit} found{print}" CHANGELOG.md)
+          # Extract Chinese changelog
+          ZH=$(awk "/^## \\[${TAG}\\]/{found=1; next} /^## \\[/{if(found) exit} found{print}" CHANGELOG_zh.md)
+          {
+            if [ -n "$EN" ]; then
+              echo "$EN"
+            fi
+            if [ -n "$ZH" ]; then
+              echo ""
+              echo "---"
+              echo ""
+              echo "$ZH"
+            fi
+            if [ -z "$EN" ] && [ -z "$ZH" ]; then
+              echo "See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details."
+            fi
+          } > /tmp/release_body.md
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:

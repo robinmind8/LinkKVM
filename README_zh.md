@@ -55,7 +55,7 @@ xattr -cr /Applications/LinkKVM.app
 
 ## 更新日志
 
-完整变更记录请查看 [CHANGELOG.md](CHANGELOG.md)。
+完整变更记录请查看 [CHANGELOG_zh.md](CHANGELOG_zh.md)。
 
 ### v0.1.0 — 首次发布
 
