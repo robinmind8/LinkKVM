@@ -18,6 +18,7 @@ pub fn run() {
     let app_state = AppState::new();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_aptabase::Builder::new("A-US-8420028614").build())
         .manage(app_state)
         .invoke_handler(tauri::generate_handler![
             commands::check_permissions,
