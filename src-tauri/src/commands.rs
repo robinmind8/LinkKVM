@@ -47,7 +47,10 @@ pub fn check_permissions() -> Result<PermissionStatus, String> {
 fn check_camera_status_macos() -> String {
     // Use swift to check AVCaptureDevice authorization status
     let result = std::process::Command::new("swift")
-        .args(["-e", "import AVFoundation; print(AVCaptureDevice.authorizationStatus(for: .video).rawValue)"])
+        .args([
+            "-e",
+            "import AVFoundation; print(AVCaptureDevice.authorizationStatus(for: .video).rawValue)",
+        ])
         .output();
 
     match result {
@@ -122,7 +125,10 @@ pub fn connect_serial(
                     Ok(msg) => {
                         tracing::info!("CH9329 probe at {} baud: {}", try_baud, msg);
                         if try_baud != baud_rate {
-                            format!("CH9329 found at {}baud (tried {}): {}", try_baud, baud_rate, msg)
+                            format!(
+                                "CH9329 found at {}baud (tried {}): {}",
+                                try_baud, baud_rate, msg
+                            )
                         } else {
                             msg
                         }
@@ -196,11 +202,7 @@ pub fn get_serial_status(state: State<'_, AppState>) -> Result<StatusInfo, Strin
 /// Send keyboard state (multiple keys pressed simultaneously)
 /// keycodes: all currently pressed keycodes (up to 6)
 #[tauri::command]
-pub fn send_key(
-    state: State<'_, AppState>,
-    modifier: u8,
-    keycodes: Vec<u8>,
-) -> Result<(), String> {
+pub fn send_key(state: State<'_, AppState>, modifier: u8, keycodes: Vec<u8>) -> Result<(), String> {
     let mut serial = state.serial.lock().map_err(|e| e.to_string())?;
     let mgr = serial.as_mut().ok_or("Serial not connected")?;
     let packet = Ch9329::build_keyboard_packet(modifier, &keycodes);
@@ -243,10 +245,7 @@ pub fn send_mouse_click(
 }
 
 #[tauri::command]
-pub fn send_mouse_scroll(
-    state: State<'_, AppState>,
-    delta: i8,
-) -> Result<(), String> {
+pub fn send_mouse_scroll(state: State<'_, AppState>, delta: i8) -> Result<(), String> {
     let mut serial = state.serial.lock().map_err(|e| e.to_string())?;
     let mgr = serial.as_mut().ok_or("Serial not connected")?;
     let packet = Ch9329::build_mouse_rel_packet(0, 0, 0, delta);
@@ -323,15 +322,22 @@ pub fn start_video(
         if config.mouse.screen_w != actual_w || config.mouse.screen_h != actual_h {
             tracing::info!(
                 "Auto-syncing mouse resolution: {}x{} → {}x{}",
-                config.mouse.screen_w, config.mouse.screen_h,
-                actual_w, actual_h
+                config.mouse.screen_w,
+                config.mouse.screen_h,
+                actual_w,
+                actual_h
             );
             config.mouse.screen_w = actual_w;
             config.mouse.screen_h = actual_h;
         }
     }
 
-    tracing::info!("Video started on device {} at {}x{}", device_index, actual_w, actual_h);
+    tracing::info!(
+        "Video started on device {} at {}x{}",
+        device_index,
+        actual_w,
+        actual_h
+    );
     Ok(VideoStartResult {
         url: "http://127.0.0.1:9527/video".to_string(),
         width: actual_w,
@@ -341,9 +347,7 @@ pub fn start_video(
 
 #[tauri::command]
 pub fn stop_video(state: State<'_, AppState>) -> Result<(), String> {
-    state
-        .video_running
-        .store(false, Ordering::Relaxed);
+    state.video_running.store(false, Ordering::Relaxed);
     tracing::info!("Video stopped");
     Ok(())
 }
@@ -371,10 +375,7 @@ pub fn get_config(state: State<'_, AppState>) -> Result<AppConfig, String> {
 }
 
 #[tauri::command]
-pub fn save_config(
-    state: State<'_, AppState>,
-    config: AppConfig,
-) -> Result<(), String> {
+pub fn save_config(state: State<'_, AppState>, config: AppConfig) -> Result<(), String> {
     config.save().map_err(|e| e.to_string())?;
     let mut current = state.config.lock().map_err(|e| e.to_string())?;
     *current = config;
@@ -398,10 +399,18 @@ pub fn get_ch9329_version(state: State<'_, AppState>) -> Result<String, String> 
 
     if n >= 13 && buf[0] == 0x57 && buf[1] == 0xAB && buf[3] == 0x81 {
         let ver_data = &buf[5..13];
-        let hex: String = ver_data.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(" ");
+        let hex: String = ver_data
+            .iter()
+            .map(|b| format!("{:02X}", b))
+            .collect::<Vec<_>>()
+            .join(" ");
         Ok(format!("V{}.{} ({})", ver_data[0], ver_data[1], hex))
     } else if n > 0 {
-        let hex: String = buf[..n].iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(" ");
+        let hex: String = buf[..n]
+            .iter()
+            .map(|b| format!("{:02X}", b))
+            .collect::<Vec<_>>()
+            .join(" ");
         Err(format!("Failed to parse version: {}", hex))
     } else {
         Err("No response".into())
@@ -424,7 +433,11 @@ pub fn get_ch9329_config(state: State<'_, AppState>) -> Result<Ch9329Config, Str
         let config_bytes = &buf[5..55];
         Ok(Ch9329::parse_config(config_bytes))
     } else if n > 0 {
-        let hex: String = buf[..n].iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(" ");
+        let hex: String = buf[..n]
+            .iter()
+            .map(|b| format!("{:02X}", b))
+            .collect::<Vec<_>>()
+            .join(" ");
         Err(format!("Failed to parse config: {}", hex))
     } else {
         Err("No response".into())
@@ -433,10 +446,16 @@ pub fn get_ch9329_config(state: State<'_, AppState>) -> Result<Ch9329Config, Str
 
 /// Write CH9329 chip configuration parameters (auto-reset after write)
 #[tauri::command]
-pub fn set_ch9329_config(state: State<'_, AppState>, config: Ch9329Config) -> Result<String, String> {
+pub fn set_ch9329_config(
+    state: State<'_, AppState>,
+    config: Ch9329Config,
+) -> Result<String, String> {
     let config_data = Ch9329::serialize_config(&config);
     if config_data.len() != 50 {
-        return Err(format!("Config data length error: {} (expected 50)", config_data.len()));
+        return Err(format!(
+            "Config data length error: {} (expected 50)",
+            config_data.len()
+        ));
     }
 
     let mut serial = state.serial.lock().map_err(|e| e.to_string())?;
@@ -459,7 +478,7 @@ pub fn set_ch9329_config(state: State<'_, AppState>, config: Ch9329Config) -> Re
     std::thread::sleep(std::time::Duration::from_millis(100));
     let _ = mgr.port_read_raw(&mut buf);
 
-    drop(mgr);
+    let _ = mgr;
     drop(serial);
 
     // Wait for chip restart
@@ -483,7 +502,10 @@ pub fn set_ch9329_config(state: State<'_, AppState>, config: Ch9329Config) -> Re
                         cfg.serial.baud_rate = new_baud;
                     }
                     tracing::info!("CH9329 config saved, reconnected at {} baud", new_baud);
-                    Ok(format!("Config saved and applied ({}bps): {}", new_baud, msg))
+                    Ok(format!(
+                        "Config saved and applied ({}bps): {}",
+                        new_baud, msg
+                    ))
                 }
                 Err(_) => {
                     // Baud rate might have changed, try other
@@ -500,7 +522,10 @@ pub fn set_ch9329_config(state: State<'_, AppState>, config: Ch9329Config) -> Re
                         }
                         Err(_) => {
                             *serial = None;
-                            Err("Config saved but unable to reconnect (please reconnect manually)".into())
+                            Err(
+                                "Config saved but unable to reconnect (please reconnect manually)"
+                                    .into(),
+                            )
                         }
                     }
                 }
@@ -527,14 +552,17 @@ pub fn reset_ch9329_default(state: State<'_, AppState>) -> Result<String, String
     let n = mgr.port_read_raw(&mut buf).unwrap_or(0);
 
     if n >= 6 && buf[5] != 0x00 {
-        return Err(format!("Factory reset failed: status code 0x{:02X}", buf[5]));
+        return Err(format!(
+            "Factory reset failed: status code 0x{:02X}",
+            buf[5]
+        ));
     }
 
     // RESET
     let pkt = Ch9329::build_reset_packet();
     mgr.port_write_raw(&pkt).map_err(|e| e.to_string())?;
 
-    drop(mgr);
+    let _ = mgr;
     drop(serial);
 
     // Factory default baud rate is 9600
@@ -597,7 +625,7 @@ pub fn move_mouse_to_position(
     target_x: f64,
     target_y: f64,
 ) -> Result<(), String> {
-    let (screen_w, screen_h) = {
+    let (_screen_w, _screen_h) = {
         let config = state.config.lock().map_err(|e| e.to_string())?;
         (config.mouse.screen_w, config.mouse.screen_h)
     };
@@ -627,9 +655,23 @@ pub fn move_mouse_to_position(
     let mut count = 0u32;
 
     while rx > 0.5 || ry > 0.5 {
-        let dx = if rx >= step { step as i8 } else if rx > 0.5 { rx.round().min(127.0) as i8 } else { 0 };
-        let dy = if ry >= step { step as i8 } else if ry > 0.5 { ry.round().min(127.0) as i8 } else { 0 };
-        if dx == 0 && dy == 0 { break; }
+        let dx = if rx >= step {
+            step as i8
+        } else if rx > 0.5 {
+            rx.round().min(127.0) as i8
+        } else {
+            0
+        };
+        let dy = if ry >= step {
+            step as i8
+        } else if ry > 0.5 {
+            ry.round().min(127.0) as i8
+        } else {
+            0
+        };
+        if dx == 0 && dy == 0 {
+            break;
+        }
 
         let pkt = Ch9329::build_mouse_rel_packet(dx, dy, 0, 0);
         mgr.write(&pkt).map_err(|e| e.to_string())?;
@@ -638,7 +680,7 @@ pub fn move_mouse_to_position(
         count += 1;
 
         // Pause every 12 packets to prevent buffer overflow
-        if count % 12 == 0 {
+        if count.is_multiple_of(12) {
             std::thread::sleep(std::time::Duration::from_millis(5));
         }
     }
@@ -651,6 +693,11 @@ pub fn move_mouse_to_position(
         *home = false;
     }
 
-    tracing::info!("Mouse positioned to ({}, {}) via {} relative packets", target_x, target_y, count);
+    tracing::info!(
+        "Mouse positioned to ({}, {}) via {} relative packets",
+        target_x,
+        target_y,
+        count
+    );
     Ok(())
 }

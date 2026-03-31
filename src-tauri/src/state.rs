@@ -10,6 +10,7 @@ pub struct AppState {
     pub frame_buffer: Arc<Mutex<Vec<u8>>>,
     pub video_running: Arc<AtomicBool>,
     /// Record last mouse absolute coordinates, used for scroll events
+    #[allow(dead_code)]
     pub last_mouse_pos: Mutex<(u16, u16)>,
     /// Actual video capture resolution (determined after ffmpeg starts)
     pub video_resolution: Arc<Mutex<(u32, u32)>>,

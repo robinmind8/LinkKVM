@@ -25,12 +25,10 @@ impl VideoCapture {
             for i in 0..10 {
                 let path = format!("/dev/video{}", i);
                 if std::path::Path::new(&path).exists() {
-                    let name = std::fs::read_to_string(format!(
-                        "/sys/class/video4linux/video{}/name",
-                        i
-                    ))
-                    .map(|s| s.trim().to_string())
-                    .unwrap_or_else(|_| format!("Video Device {}", i));
+                    let name =
+                        std::fs::read_to_string(format!("/sys/class/video4linux/video{}/name", i))
+                            .map(|s| s.trim().to_string())
+                            .unwrap_or_else(|_| format!("Video Device {}", i));
                     devices.push(DeviceInfo { index: i, name });
                 }
             }
@@ -86,10 +84,7 @@ impl VideoCapture {
             .output()?;
 
         if !output.status.success() {
-            return Err(format!(
-                "system_profiler exited with {}",
-                output.status
-            ).into());
+            return Err(format!("system_profiler exited with {}", output.status).into());
         }
 
         let json: serde_json::Value = serde_json::from_slice(&output.stdout)?;
@@ -188,46 +183,56 @@ impl VideoCapture {
         #[cfg(target_os = "macos")]
         {
             args.extend_from_slice(&[
-                "-f".into(), "avfoundation".into(),
-                "-framerate".into(), self.fps.to_string(),
-                "-video_size".into(), format!("{}x{}", self.width, self.height),
+                "-f".into(),
+                "avfoundation".into(),
+                "-framerate".into(),
+                self.fps.to_string(),
+                "-video_size".into(),
+                format!("{}x{}", self.width, self.height),
             ]);
             // Request native MJPEG from device to avoid CPU transcoding
             if self.format.eq_ignore_ascii_case("mjpeg") {
-                args.extend_from_slice(&[
-                    "-pixel_format".into(), "mjpeg".into(),
-                ]);
+                args.extend_from_slice(&["-pixel_format".into(), "mjpeg".into()]);
             }
-            args.extend_from_slice(&[
-                "-i".into(), self.device_index.to_string(),
-            ]);
+            args.extend_from_slice(&["-i".into(), self.device_index.to_string()]);
         }
 
         #[cfg(target_os = "linux")]
         {
             args.extend_from_slice(&[
-                "-f".into(), "v4l2".into(),
-                "-framerate".into(), self.fps.to_string(),
-                "-video_size".into(), format!("{}x{}", self.width, self.height),
-                "-i".into(), format!("/dev/video{}", self.device_index),
+                "-f".into(),
+                "v4l2".into(),
+                "-framerate".into(),
+                self.fps.to_string(),
+                "-video_size".into(),
+                format!("{}x{}", self.width, self.height),
+                "-i".into(),
+                format!("/dev/video{}", self.device_index),
             ]);
         }
 
         #[cfg(target_os = "windows")]
         {
             args.extend_from_slice(&[
-                "-f".into(), "dshow".into(),
-                "-framerate".into(), self.fps.to_string(),
-                "-video_size".into(), format!("{}x{}", self.width, self.height),
-                "-i".into(), format!("video={}", self.device_index),
+                "-f".into(),
+                "dshow".into(),
+                "-framerate".into(),
+                self.fps.to_string(),
+                "-video_size".into(),
+                format!("{}x{}", self.width, self.height),
+                "-i".into(),
+                format!("video={}", self.device_index),
             ]);
         }
 
         // Output: MJPEG image2pipe to stdout
         args.extend_from_slice(&[
-            "-f".into(), "image2pipe".into(),
-            "-vcodec".into(), "mjpeg".into(),
-            "-q:v".into(), "3".into(),
+            "-f".into(),
+            "image2pipe".into(),
+            "-vcodec".into(),
+            "mjpeg".into(),
+            "-q:v".into(),
+            "3".into(),
             "pipe:1".into(),
         ]);
 
@@ -236,7 +241,10 @@ impl VideoCapture {
 
     /// Try to start ffmpeg with specified resolution, fallback on failure
     /// Returns (child_process, actual_width, actual_height)
-    fn try_start_ffmpeg(&self, running: &Arc<AtomicBool>) -> Result<(std::process::Child, u32, u32), String> {
+    fn try_start_ffmpeg(
+        &self,
+        running: &Arc<AtomicBool>,
+    ) -> Result<(std::process::Child, u32, u32), String> {
         // Try user configured resolution, then fallback
         let resolutions = [
             (self.width, self.height, self.fps),
@@ -263,7 +271,13 @@ impl VideoCapture {
                 continue;
             }
 
-            tracing::info!("Trying ffmpeg capture: {}x{}@{}fps device={}", w, h, fps, self.device_index);
+            tracing::info!(
+                "Trying ffmpeg capture: {}x{}@{}fps device={}",
+                w,
+                h,
+                fps,
+                self.device_index
+            );
 
             let capture = Self {
                 device_index: self.device_index,
@@ -295,21 +309,32 @@ impl VideoCapture {
                     match child.try_wait() {
                         Ok(Some(status)) => {
                             // ffmpeg already exited, parameters not supported
-                            let stderr_msg = child.stderr.take()
+                            let stderr_msg = child
+                                .stderr
+                                .take()
                                 .and_then(|mut s| {
                                     let mut buf = String::new();
                                     std::io::Read::read_to_string(&mut s, &mut buf).ok()?;
                                     Some(buf)
                                 })
                                 .unwrap_or_default();
-                            last_err = format!("ffmpeg exited {} for {}: {}", status, key,
-                                stderr_msg.lines().filter(|l| l.contains("not supported") || l.contains("Error") || l.contains("Invalid"))
-                                    .collect::<Vec<_>>().join("; "));
+                            last_err = format!(
+                                "ffmpeg exited {} for {}: {}",
+                                status,
+                                key,
+                                stderr_msg
+                                    .lines()
+                                    .filter(|l| l.contains("not supported")
+                                        || l.contains("Error")
+                                        || l.contains("Invalid"))
+                                    .collect::<Vec<_>>()
+                                    .join("; ")
+                            );
                             tracing::warn!("{}", last_err);
                             // If using MJPEG pixel_format and it failed, retry without it
                             if self.format.eq_ignore_ascii_case("mjpeg") {
                                 tracing::info!("Retrying {} without -pixel_format mjpeg", key);
-                                let mut capture_raw = Self {
+                                let capture_raw = Self {
                                     device_index: self.device_index,
                                     width: *w,
                                     height: *h,
@@ -331,7 +356,12 @@ impl VideoCapture {
                                     }
                                     match child2.try_wait() {
                                         Ok(None) => {
-                                            tracing::info!("ffmpeg started (auto format): {}x{}@{}fps", w, h, fps);
+                                            tracing::info!(
+                                                "ffmpeg started (auto format): {}x{}@{}fps",
+                                                w,
+                                                h,
+                                                fps
+                                            );
                                             return Ok((child2, *w, *h));
                                         }
                                         _ => {
@@ -363,11 +393,19 @@ impl VideoCapture {
             }
         }
 
-        Err(format!("All ffmpeg resolutions failed. Last error: {}", last_err))
+        Err(format!(
+            "All ffmpeg resolutions failed. Last error: {}",
+            last_err
+        ))
     }
 
     /// Capture loop: capture frames via ffmpeg subprocess and write to shared buffer
-    pub fn run_loop(self, buffer: Arc<Mutex<Vec<u8>>>, running: Arc<AtomicBool>, video_resolution: Arc<Mutex<(u32, u32)>>) {
+    pub fn run_loop(
+        self,
+        buffer: Arc<Mutex<Vec<u8>>>,
+        running: Arc<AtomicBool>,
+        video_resolution: Arc<Mutex<(u32, u32)>>,
+    ) {
         tracing::info!(
             "Capture loop starting: device={}, {}x{}@{}fps",
             self.device_index,
@@ -469,8 +507,11 @@ impl VideoCapture {
                         frame_count += 1;
 
                         if last_log.elapsed() >= std::time::Duration::from_secs(5) {
-                            tracing::info!("Captured {} frames, last frame {} bytes",
-                                frame_count, frame_buf.len());
+                            tracing::info!(
+                                "Captured {} frames, last frame {} bytes",
+                                frame_count,
+                                frame_buf.len()
+                            );
                             last_log = std::time::Instant::now();
                         }
 

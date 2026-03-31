@@ -1,5 +1,4 @@
 use std::io::Write;
-use std::net::TcpListener;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -12,11 +11,10 @@ pub fn start_mjpeg_server(
     running: Arc<AtomicBool>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let listener = {
-        let socket = std::net::TcpListener::bind(BIND_ADDR)
-            .or_else(|_| {
-                std::thread::sleep(std::time::Duration::from_millis(500));
-                std::net::TcpListener::bind(BIND_ADDR)
-            })?;
+        let socket = std::net::TcpListener::bind(BIND_ADDR).or_else(|_| {
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            std::net::TcpListener::bind(BIND_ADDR)
+        })?;
         socket.set_nonblocking(true)?;
         socket
     };
@@ -63,7 +61,10 @@ fn handle_client(
         }
 
         // Read timeout for keep-alive idle connections
-        if let Err(_) = stream.set_read_timeout(Some(std::time::Duration::from_secs(30))) {
+        if stream
+            .set_read_timeout(Some(std::time::Duration::from_secs(30)))
+            .is_err()
+        {
             return;
         }
 
@@ -169,9 +170,15 @@ fn handle_mjpeg_stream(
             frame.len()
         );
 
-        if stream.write_all(part.as_bytes()).is_err() { break; }
-        if stream.write_all(&frame).is_err() { break; }
-        if stream.write_all(b"\r\n").is_err() { break; }
+        if stream.write_all(part.as_bytes()).is_err() {
+            break;
+        }
+        if stream.write_all(&frame).is_err() {
+            break;
+        }
+        if stream.write_all(b"\r\n").is_err() {
+            break;
+        }
 
         std::thread::sleep(frame_interval);
     }

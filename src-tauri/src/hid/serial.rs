@@ -107,11 +107,17 @@ impl SerialManager {
 
         match result {
             Ok(port) => {
-                tracing::info!("Serial port opened via standard method at {} baud", baud_rate);
+                tracing::info!(
+                    "Serial port opened via standard method at {} baud",
+                    baud_rate
+                );
                 Ok(Port::Standard(port))
             }
             Err(e) => {
-                tracing::warn!("Standard serial open failed: {}. Trying CH34x workaround...", e);
+                tracing::warn!(
+                    "Standard serial open failed: {}. Trying CH34x workaround...",
+                    e
+                );
                 #[cfg(target_os = "macos")]
                 {
                     return Self::open_macos_ch34x(port_name, baud_rate);
@@ -141,7 +147,10 @@ impl SerialManager {
     /// Strategy A: Use libc to directly open + tcsetattr (consistent with pyserial, verified)
     /// Strategy B: serialport crate open at 9600 + IOSSIOSPEED
     #[cfg(target_os = "macos")]
-    fn open_macos_ch34x(port_name: &str, baud_rate: u32) -> Result<Port, Box<dyn std::error::Error>> {
+    fn open_macos_ch34x(
+        port_name: &str,
+        baud_rate: u32,
+    ) -> Result<Port, Box<dyn std::error::Error>> {
         // Strategy A: Use libc to open directly, bypassing serialport crate's cfmakeraw
         // cfmakeraw modifies too many termios flags, CH34x DriverKit driver rejects non-9600 baud rates
         // pyserial uses a milder raw config, verified in test_serial.py
@@ -156,7 +165,11 @@ impl SerialManager {
             Err(e) => tracing::warn!("Strategy B (9600+IOSSIOSPEED) failed: {}", e),
         }
 
-        Err(format!("All serial open strategies failed for {} at {}", port_name, baud_rate).into())
+        Err(format!(
+            "All serial open strategies failed for {} at {}",
+            port_name, baud_rate
+        )
+        .into())
     }
 
     /// Strategy A: Use libc to directly open and configure serial port (consistent with Python/pyserial behavior)
@@ -167,10 +180,18 @@ impl SerialManager {
 
         let c_path = CString::new(port_name)?;
         let fd = unsafe {
-            libc::open(c_path.as_ptr(), libc::O_RDWR | libc::O_NOCTTY | libc::O_NONBLOCK)
+            libc::open(
+                c_path.as_ptr(),
+                libc::O_RDWR | libc::O_NOCTTY | libc::O_NONBLOCK,
+            )
         };
         if fd < 0 {
-            return Err(format!("open({}) failed: {}", port_name, std::io::Error::last_os_error()).into());
+            return Err(format!(
+                "open({}) failed: {}",
+                port_name,
+                std::io::Error::last_os_error()
+            )
+            .into());
         }
 
         // Clear O_NONBLOCK (use blocking I/O after opening)
@@ -189,16 +210,22 @@ impl SerialManager {
             }
 
             // Input: disable software flow control, character conversion
-            termios.c_iflag &= !(libc::IXON | libc::IXOFF | libc::IXANY
-                | libc::INLCR | libc::IGNCR | libc::ICRNL
-                | libc::ISTRIP | libc::INPCK);
+            termios.c_iflag &= !(libc::IXON
+                | libc::IXOFF
+                | libc::IXANY
+                | libc::INLCR
+                | libc::IGNCR
+                | libc::ICRNL
+                | libc::ISTRIP
+                | libc::INPCK);
             // Output: disable output processing
             termios.c_oflag &= !libc::OPOST;
             // Control: 8N1, enable receiver, local mode
             termios.c_cflag &= !(libc::CSIZE | libc::PARENB | libc::CSTOPB);
             termios.c_cflag |= libc::CS8 | libc::CREAD | libc::CLOCAL;
             // Local: disable canonical mode and echo
-            termios.c_lflag &= !(libc::ICANON | libc::ECHO | libc::ECHOE | libc::ISIG | libc::IEXTEN);
+            termios.c_lflag &=
+                !(libc::ICANON | libc::ECHO | libc::ECHOE | libc::ISIG | libc::IEXTEN);
             // Read timeout: VMIN=0, VTIME=1 (100ms)
             termios.c_cc[libc::VMIN] = 0;
             termios.c_cc[libc::VTIME] = 1;
@@ -209,10 +236,7 @@ impl SerialManager {
             if libc::tcsetattr(fd, libc::TCSANOW, &termios) != 0 {
                 let err = std::io::Error::last_os_error();
                 libc::close(fd);
-                return Err(format!(
-                    "tcsetattr at {} failed: {}",
-                    baud_rate, err
-                ).into());
+                return Err(format!("tcsetattr at {} failed: {}", baud_rate, err).into());
             }
 
             // Verify baud rate
@@ -224,7 +248,10 @@ impl SerialManager {
         let (ispeed, ospeed) = configure_result;
         tracing::info!(
             "Raw libc open OK: {} at {} baud (verified: ispeed={}, ospeed={})",
-            port_name, baud_rate, ispeed, ospeed
+            port_name,
+            baud_rate,
+            ispeed,
+            ospeed
         );
 
         let file = unsafe { std::fs::File::from_raw_fd(fd) };
@@ -233,7 +260,10 @@ impl SerialManager {
 
     /// Strategy B: serialport crate open at 9600 + IOSSIOSPEED to set target baud rate
     #[cfg(target_os = "macos")]
-    fn open_serialport_with_iossiospeed(port_name: &str, baud_rate: u32) -> Result<Port, Box<dyn std::error::Error>> {
+    fn open_serialport_with_iossiospeed(
+        port_name: &str,
+        baud_rate: u32,
+    ) -> Result<Port, Box<dyn std::error::Error>> {
         let port = serialport::new(port_name, 9600)
             .timeout(Duration::from_millis(100))
             .data_bits(serialport::DataBits::Eight)
@@ -282,8 +312,17 @@ impl SerialManager {
 
         // Log detailed info for first 5 writes
         if self.write_count <= 5 {
-            let hex: String = data.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(" ");
-            tracing::info!("Serial write #{}: [{}] ({} bytes)", self.write_count, hex, data.len());
+            let hex: String = data
+                .iter()
+                .map(|b| format!("{:02X}", b))
+                .collect::<Vec<_>>()
+                .join(" ");
+            tracing::info!(
+                "Serial write #{}: [{}] ({} bytes)",
+                self.write_count,
+                hex,
+                data.len()
+            );
         }
 
         // Read CH9329 response (required! otherwise response accumulation causes command failures)
@@ -306,14 +345,26 @@ impl SerialManager {
                     tracing::warn!("CH9329 returned error: 0x{:02X} ({})", status, status_text);
                 }
                 if self.write_count <= 5 {
-                    let hex: String = bytes.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(" ");
+                    let hex: String = bytes
+                        .iter()
+                        .map(|b| format!("{:02X}", b))
+                        .collect::<Vec<_>>()
+                        .join(" ");
                     tracing::info!("Serial resp #{}: [{}]", self.write_count, hex);
                 }
             }
             Some(ref bytes) if !bytes.is_empty() => {
                 if self.write_count <= 10 {
-                    let hex: String = bytes.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(" ");
-                    tracing::warn!("CH9329 incomplete response ({} bytes): [{}]", bytes.len(), hex);
+                    let hex: String = bytes
+                        .iter()
+                        .map(|b| format!("{:02X}", b))
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    tracing::warn!(
+                        "CH9329 incomplete response ({} bytes): [{}]",
+                        bytes.len(),
+                        hex
+                    );
                 }
             }
             _ => {
@@ -367,6 +418,7 @@ impl SerialManager {
     }
 
     /// Read data from serial port
+    #[allow(dead_code)]
     pub fn read(&mut self, buf: &mut [u8]) -> Result<usize, Box<dyn std::error::Error>> {
         let n = self.port.read(buf)?;
         Ok(n)
@@ -404,12 +456,20 @@ impl SerialManager {
         let n = self.port.read(&mut buf)?;
 
         if n >= 6 && buf[0] == 0x57 && buf[1] == 0xAB {
-            let hex: String = buf[..n].iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(" ");
+            let hex: String = buf[..n]
+                .iter()
+                .map(|b| format!("{:02X}", b))
+                .collect::<Vec<_>>()
+                .join(" ");
             let msg = format!("CH9329 responded ({} bytes): {}", n, hex);
             tracing::info!("{}", msg);
             Ok(msg)
         } else if n > 0 {
-            let hex: String = buf[..n].iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(" ");
+            let hex: String = buf[..n]
+                .iter()
+                .map(|b| format!("{:02X}", b))
+                .collect::<Vec<_>>()
+                .join(" ");
             Err(format!("Invalid response ({} bytes): {} - check baud rate", n, hex).into())
         } else {
             Err("No response from CH9329 - check port and baud rate".into())

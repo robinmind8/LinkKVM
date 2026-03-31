@@ -1,6 +1,7 @@
-/// USB HID keycode constant definitions
-///
-/// Reference: USB HID Usage Tables - Keyboard/Keypad Page (0x07)
+#![allow(dead_code)]
+// USB HID keycode constant definitions
+//
+// Reference: USB HID Usage Tables - Keyboard/Keypad Page (0x07)
 
 // Letter keys A-Z
 pub const KEY_A: u8 = 0x04;

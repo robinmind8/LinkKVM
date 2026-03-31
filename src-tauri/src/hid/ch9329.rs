@@ -4,8 +4,10 @@
 /// [0x57] [0xAB] [addr] [cmd] [len] [data...] [checksum]
 ///
 /// Checksum = sum of all bytes (mod 256)
+#[allow(dead_code)]
 pub struct Ch9329;
 
+#[allow(dead_code)]
 impl Ch9329 {
     const HEAD: [u8; 2] = [0x57, 0xAB];
     const ADDR: u8 = 0x00;
@@ -145,8 +147,12 @@ impl Ch9329 {
         data.resize(50, 0);
 
         // Write back modifiable fields
-        data[0] = (data[0] & 0x7C) | (cfg.chip_mode & 0x03) | if cfg.custom_string_enabled { 0x80 } else { 0 };
-        data[1] = (data[1] & 0x78) | (cfg.usb_device_type & 0x07) | if cfg.custom_vid_pid { 0x80 } else { 0 };
+        data[0] = (data[0] & 0x7C)
+            | (cfg.chip_mode & 0x03)
+            | if cfg.custom_string_enabled { 0x80 } else { 0 };
+        data[1] = (data[1] & 0x78)
+            | (cfg.usb_device_type & 0x07)
+            | if cfg.custom_vid_pid { 0x80 } else { 0 };
         data[3] = cfg.serial_mode;
         data[4] = ((cfg.baud_rate >> 16) & 0xFF) as u8;
         data[5] = ((cfg.baud_rate >> 8) & 0xFF) as u8;
@@ -246,7 +252,7 @@ mod tests {
         assert_eq!(packet[3], 0x05); // mouse rel cmd
         assert_eq!(packet[4], 0x05); // data length = 5
         assert_eq!(packet[5], 0x01); // rel mode flag
-        assert_eq!(packet[7], 10);   // dx
+        assert_eq!(packet[7], 10); // dx
         assert_eq!(packet[8], (-5i8) as u8); // dy
     }
 
