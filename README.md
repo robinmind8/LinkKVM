@@ -39,6 +39,20 @@ Host Computer (running LinkKVM)
 | USB to TTL | CH340G | ~$0.5 |
 | Dupont Wires | - | ~$0.5 |
 
+## Troubleshooting
+
+### macOS: "LinkKVM is damaged and can't be opened"
+
+This is caused by macOS Gatekeeper blocking unsigned applications. Since the CI-built app is not signed with an Apple Developer certificate, macOS treats it as potentially unsafe.
+
+**Solution 1:** Remove the quarantine attribute via Terminal:
+
+```bash
+xattr -cr /Applications/LinkKVM.app
+```
+
+**Solution 2:** Right-click the app → select **Open** → click **Open** in the dialog (instead of double-clicking).
+
 ## Contributing
 
 We welcome your participation in the following ways:
