@@ -55,6 +55,8 @@ xattr -cr /Applications/LinkKVM.app
 
 ## 更新日志
 
+完整变更记录请查看 [CHANGELOG.md](CHANGELOG.md)。
+
 ### v0.1.0 — 首次发布
 
 - **远程画面采集** — 通过 USB HDMI 采集卡（UVC/MJPEG）实时显示目标计算机屏幕

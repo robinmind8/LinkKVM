@@ -55,6 +55,8 @@ xattr -cr /Applications/LinkKVM.app
 
 ## Release Notes
 
+See [CHANGELOG.md](CHANGELOG.md) for a full history of changes.
+
 ### v0.1.0 — Initial Release
 
 - **Remote Screen Capture** — Real-time display of target computer screen via USB HDMI capture card (UVC/MJPEG)
