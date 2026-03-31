@@ -53,6 +53,19 @@ xattr -cr /Applications/LinkKVM.app
 
 **Solution 2:** Right-click the app → select **Open** → click **Open** in the dialog (instead of double-clicking).
 
+## Release Notes
+
+### v0.1.0 — Initial Release
+
+- **Remote Screen Capture** — Real-time display of target computer screen via USB HDMI capture card (UVC/MJPEG)
+- **Keyboard Control** — Full keyboard input forwarding to target computer via CH9329 serial HID protocol
+- **Mouse Control** — Support both absolute and relative mouse coordinate modes with movement, click, and scroll
+- **Serial Port Management** — Auto-detect serial ports, configurable baud rate, connection status monitoring
+- **Quick Actions** — One-click Ctrl+Alt+Del, PrintScreen, and other common key combinations
+- **CH9329 Configuration** — Read/write chip parameters, factory reset, firmware version detection
+- **Cross-Platform** — Native desktop apps for macOS (.dmg), Windows (.exe), and Linux (.deb)
+- **TOML Configuration** — Persistent settings for serial port, video, and mouse preferences
+
 ## Contributing
 
 We welcome your participation in the following ways:

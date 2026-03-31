@@ -23,6 +23,7 @@ serialport = "4"
 toml = "0.8"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
 dirs = "5"
 
 [target.'cfg(target_os = "macos")'.dependencies]
