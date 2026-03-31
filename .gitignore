@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+build/dist/
+build/release/
+dist/
+
+# Rust/Tauri
+src-tauri/target/
+
+# OS
+.DS_Store
+@eaDir/
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+Cargo.lock
